@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alcohol Label Verification</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, Helvetica, sans-serif; }
+    body {
+      margin: 0;
+      background: #f4f5f7;
+      color: #222;
+    }
+    header {
+      background: #1f3a5f;
+      color: white;
+      padding: 20px 30px;
+    }
+    header h1 { margin: 0; font-size: 24px; }
+    header p { margin: 4px 0 0; font-size: 14px; color: #cfe0f5; }
+
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 0 20px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .tab-button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      background: #e0e6ed;
+      color: #1f3a5f;
+      cursor: pointer;
+      border-radius: 6px 6px 0 0;
+      font-weight: bold;
+    }
+    .tab-button.active {
+      background: #1f3a5f;
+      color: white;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+
+    label { display: block; font-weight: bold; margin: 12px 0 4px; font-size: 15px; }
+    input[type="text"], input[type="file"], textarea {
+      width: 100%;
+      padding: 10px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    textarea { font-family: monospace; min-height: 140px; }
+
+    .btn {
+      margin-top: 20px;
+      padding: 14px 28px;
+      font-size: 16px;
+      font-weight: bold;
+      background: #2a6f4d;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #235c40; }
+    .btn:disabled { background: #999; cursor: not-allowed; }
+
+    .results { margin-top: 24px; }
+    .result-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      background: #fafafa;
+    }
+    .result-card h3 { margin-top: 0; }
+    .field-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      gap: 12px;
+    }
+    .field-row:last-child { border-bottom: none; }
+    .field-name { font-weight: bold; min-width: 160px; }
+    .field-detail { flex: 1; font-size: 14px; color: #555; }
+    .status {
+      font-size: 18px;
+      font-weight: bold;
+      min-width: 30px;
+      text-align: center;
+    }
+    .pass { color: #2a6f4d; }
+    .fail { color: #c0392b; }
+
+    .overall-banner {
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      display: inline-block;
+    }
+    .overall-banner.pass { background: #e6f4ea; color: #2a6f4d; }
+    .overall-banner.fail { background: #fdecea; color: #c0392b; }
+
+    .summary-box {
+      background: #eef3f8;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 16px;
+      font-size: 16px;
+    }
+
+    .help-text { font-size: 13px; color: #777; margin-top: 4px; }
+
+    .loading {
+      display: inline-block;
+      margin-top: 16px;
+      font-weight: bold;
+      color: #1f3a5f;
+    }
+
+    .raw-text {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #888;
+      white-space: pre-wrap;
+      background: #f0f0f0;
+      padding: 8px;
+      border-radius: 4px;
+      max-height: 100px;
+      overflow-y: auto;
+    }
+    details summary { cursor: pointer; font-size: 13px; color: #1f3a5f; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Alcohol Label Verification</h1>
+    <p>Upload a label image, enter the application details, and check for matches in seconds.</p>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-button active" onclick="switchTab('single')">Single Label</button>
+      <button class="tab-button" onclick="switchTab('batch')">Batch Upload</button>
+    </div>
+
+    <!-- SINGLE LABEL TAB -->
+    <div id="single-tab" class="tab-content active">
+      <div class="card">
+        <form id="single-form">
+          <label for="single-image">Label Image</label>
+          <input type="file" id="single-image" accept="image/*" required />
+
+          <label for="brand-name">Brand Name (as on application)</label>
+          <input type="text" id="brand-name" placeholder="e.g. OLD TOM DISTILLERY" />
+
+          <label for="class-type">Class / Type Designation</label>
+          <input type="text" id="class-type" placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
+
+          <label for="alcohol-content">Alcohol Content (ABV)</label>
+          <input type="text" id="alcohol-content" placeholder="e.g. 45%" />
+
+          <label for="net-contents">Net Contents</label>
+          <input type="text" id="net-contents" placeholder="e.g. 750 mL" />
+
+          <button type="submit" class="btn">Verify Label</button>
+          <div id="single-loading" class="loading" style="display:none;">Checking label...</div>
+        </form>
+      </div>
+
+      <div id="single-results" class="results"></div>
+    </div>
+
+    <!-- BATCH TAB -->
+    <div id="batch-tab" class="tab-content">
+      <div class="card">
+        <form id="batch-form">
+          <label for="batch-images">Label Images (select multiple)</label>
+          <input type="file" id="batch-images" accept="image/*" multiple required />
+          <p class="help-text">Filenames must match the "filename" values in the JSON below.</p>
+
+          <label for="batch-json">Applications JSON</label>
+          <textarea id="batch-json" placeholder='[
+  {
+    "filename": "label1.jpg",
+    "brand_name": "OLD TOM DISTILLERY",
+    "class_type": "Kentucky Straight Bourbon Whiskey",
+    "alcohol_content": "45%",
+    "net_contents": "750 mL"
+  }
+]'></textarea>
+
+          <button type="submit" class="btn">Verify Batch</button>
+          <div id="batch-loading" class="loading" style="display:none;">Processing batch...</div>
+        </form>
+      </div>
+
+      <div id="batch-results" class="results"></div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(tab + '-tab').classList.add('active');
+      document.querySelectorAll('.tab-button')[tab === 'single' ? 0 : 1].classList.add('active');
+    }
+
+    function fieldLabel(key) {
+      const labels = {
+        brand_name: "Brand Name",
+        class_type: "Class / Type",
+        alcohol_content: "Alcohol Content",
+        net_contents: "Net Contents",
+        government_warning: "Government Warning",
+      };
+      return labels[key] || key;
+    }
+
+    function renderFieldRow(key, field) {
+      const status = field.match ? '✅' : '❌';
+      const statusClass = field.match ? 'pass' : 'fail';
+      let detail = `Expected: <strong>${field.expected ?? '(not provided)'}</strong> &nbsp;|&nbsp; Found: ${field.found_in_label ?? 'Not found'}`;
+      if (field.notes && field.notes.length) {
+        detail += `<br/><em>${field.notes.join(' ')}</em>`;
+      }
+      if (typeof field.score === 'number') {
+        detail += ` &nbsp;(similarity: ${field.score}%)`;
+      }
+      return `
+        <div class="field-row">
+          <div class="field-name">${fieldLabel(key)}</div>
+          <div class="field-detail">${detail}</div>
+          <div class="status ${statusClass}">${status}</div>
+        </div>
+      `;
+    }
+
+    function renderResultCard(result) {
+      const overallClass = result.overall_match ? 'pass' : 'fail';
+      const overallText = result.overall_match ? 'PASS — All checked fields match' : 'REVIEW NEEDED — One or more fields do not match';
+
+      let fieldsHtml = '';
+      for (const [key, field] of Object.entries(result.fields || {})) {
+        fieldsHtml += renderFieldRow(key, field);
+      }
+
+      let errorHtml = '';
+      if (result.error) {
+        errorHtml = `<p style="color:#c0392b;"><strong>Error:</strong> ${result.error}</p>`;
+      }
+
+      return `
+        <div class="result-card">
+          <h3>${result.filename || 'Label'}</h3>
+          ${errorHtml}
+          ${result.overall_match !== undefined ? `<div class="overall-banner ${overallClass}">${overallText}</div>` : ''}
+          ${fieldsHtml}
+          ${result.raw_ocr_text ? `
+            <details>
+              <summary>View raw extracted text (OCR)</summary>
+              <div class="raw-text">${result.raw_ocr_text}</div>
+            </details>` : ''}
+        </div>
+      `;
+    }
+
+    // ---- Single label form ----
+    document.getElementById('single-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fileInput = document.getElementById('single-image');
+      if (!fileInput.files.length) return;
+
+      const formData = new FormData();
+      formData.append('image', fileInput.files[0]);
+      formData.append('brand_name', document.getElementById('brand-name').value);
+      formData.append('class_type', document.getElementById('class-type').value);
+      formData.append('alcohol_content', document.getElementById('alcohol-content').value);
+      formData.append('net_contents', document.getElementById('net-contents').value);
+
+      const loading = document.getElementById('single-loading');
+      const resultsDiv = document.getElementById('single-results');
+      loading.style.display = 'inline-block';
+      resultsDiv.innerHTML = '';
+
+      try {
+        const res = await fetch('/verify', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+          resultsDiv.innerHTML = `<div class="result-card"><p style="color:#c0392b;"><strong>Error:</strong> ${data.detail || 'Verification failed'}</p></div>`;
+        } else {
+          resultsDiv.innerHTML = renderResultCard(data);
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<div class="result-card"><p style="color:#c0392b;"><strong>Error:</strong> ${err.message}</p></div>`;
+      } finally {
+        loading.style.display = 'none';
+      }
+    });
+
+    // ---- Batch form ----
+    document.getElementById('batch-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const filesInput = document.getElementById('batch-images');
+      const jsonInput = document.getElementById('batch-json').value;
+
+      if (!filesInput.files.length) return;
+
+      let applications;
+      try {
+        applications = JSON.parse(jsonInput);
+      } catch (err) {
+        alert('Invalid JSON in Applications field: ' + err.message);
+        return;
+      }
+
+      const formData = new FormData();
+      for (const file of filesInput.files) {
+        formData.append('images', file);
+      }
+      formData.append('applications', JSON.stringify(applications));
+
+      const loading = document.getElementById('batch-loading');
+      const resultsDiv = document.getElementById('batch-results');
+      loading.style.display = 'inline-block';
+      resultsDiv.innerHTML = '';
+
+      try {
+        const res = await fetch('/verify-batch', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!res.ok) {
+          resultsDiv.innerHTML = `<div class="result-card"><p style="color:#c0392b;"><strong>Error:</strong> ${data.detail || 'Verification failed'}</p></div>`;
+        } else {
+          let html = `
+            <div class="summary-box">
+              <strong>Summary:</strong>
+              ${data.summary.total} total &nbsp;|&nbsp;
+              ✅ ${data.summary.passed} passed &nbsp;|&nbsp;
+              ❌ ${data.summary.failed} need review &nbsp;|&nbsp;
+              ⚠️ ${data.summary.errors} errors
+            </div>
+          `;
+          for (const result of data.results) {
+            html += renderResultCard(result);
+          }
+          resultsDiv.innerHTML = html;
+        }
+      } catch (err) {
+        resultsDiv.innerHTML = `<div class="result-card"><p style="color:#c0392b;"><strong>Error:</strong> ${err.message}</p></div>`;
+      } finally {
+        loading.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
